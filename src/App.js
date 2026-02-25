@@ -6,40 +6,53 @@ import AddEventForm from './components/AddEventForm';
 import './App.css';
 import { useQuery, useQueryClient, useMutation} from '@tanstack/react-query';
 
-// Note you will have to update this env variable in your Frontend/buildspec.yml with your created beanstalk URL.
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
-// use this endpoints URLs for your fetching and adding logic that you will implement.
 const FETCH_EVENTS_URL = `${API_BASE}/data`;
 const ADD_EVENT_URL = `${API_BASE}/events`;
 
-
-// TODO: Implement this function to fetch event data from your backend. Return the parsed JSON (an array of event objects)
-// HINT: Use the `fetch()` API and handle errors appropriately.
-const fetchEvents = async () => {};
-
+const fetchEvents = async () => {
+  const response = await fetch(FETCH_EVENTS_URL);
+  if (!response.ok) {
+    throw new Error('Failed to fetch events');
+  }
+  const json = await response.json();
+  return json.data;
+};
 
 function App({}) {
   const queryClient = useQueryClient(); 
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  // TODO: Use TanStack Query's `useQuery` hook to fetch events from your backend.
-  // HINT: `queryKey` and a `queryFn`
-  const { data: events = [], isLoading, error } = useQuery({});
+  const { data: events = [], isLoading, error } = useQuery({
+    queryKey: ['events'],
+    queryFn: fetchEvents,
+  });
 
-  // TODO: Implement this function to send a POST request to your backend to add a new event.
-  // HINT: Use the `fetch()` API and implement error handling.
-  const addEvent = async (newEvent) => {};
+  const addEvent = async (newEvent) => {
+    const response = await fetch(ADD_EVENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEvent),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to add event');
+    }
+    return response.json();
+  };
 
-  // TODO: Use `useMutation` from TanStack Query to call your `addEvent` function.
-  // HINT: On success, invalidate the query (so 'events' can be refeteched and updated) and close the form pop-up.
-  const mutation = useMutation({});
+  const mutation = useMutation({
+    mutationFn: addEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      setShowForm(false);
+    },
+  });
 
-  // TODO: Call your mutation function to trigger the event addition.
-  // HINT: Use `mutation.mutate()`.
-  const handleAddEvent = (newEvent) => {};
-
+  const handleAddEvent = (newEvent) => {
+    mutation.mutate(newEvent);
+  };
 
   return (
     <div className="App">
@@ -58,7 +71,6 @@ function App({}) {
         <EventGrid query={query} events={events} />
       )}
 
-      {/* Add-New-Event Popup */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -72,4 +84,3 @@ function App({}) {
 }
 
 export default App;
-
